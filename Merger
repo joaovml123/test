@@ -1,0 +1,45 @@
+import psycopg2
+import pandas as pd
+
+# Configurações de conexão
+conn = psycopg2.connect(
+    host="192.168.0.250",
+    port="5432",
+    dbname="zoombox",  # Substitua pelo nome do seu banco de dados
+    user="consulta_lucas",
+    password="Lucas@123"
+)
+
+# Define a query
+query = """
+SELECT
+    v."data",
+    v.cpf,
+    v.valor,
+    i.valorunitario,
+    i.quantidade,
+    i.codigoexternoproduto,
+    v.numerocupom
+FROM
+    public.venda v
+INNER JOIN public.itemvenda i ON
+    v.id = i.idvenda
+WHERE
+    v."data" > '2024-02-05';
+
+"""
+
+# Carrega os dados em partes
+chunk_size = 1000000000  # Define o tamanho dos chunks
+try:
+    with conn.cursor(name='venda_cursor') as cursor:
+        cursor.execute(query)
+        while True:
+            chunk = cursor.fetchmany(chunk_size)
+            if not chunk:
+                break
+            df = pd.DataFrame(chunk, columns=["data", "cpf", "valor", "valorunitario", "quantidade", "codigoexternoproduto", "numerocupom"])
+            print(df.head())  # Processa o chunk, por exemplo, mostrando os primeiros registros
+            # Aqui você pode salvar o chunk em um arquivo, processá-lo, etc.
+finally:
+    conn.close()
